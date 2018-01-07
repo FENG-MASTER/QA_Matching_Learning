@@ -37,6 +37,13 @@ class DBHelper(object):
         """
         return self.questions.find(no_cursor_timeout=True)
 
+    def get_all_answers(self):
+        """
+        获取所有答案
+        :return:
+        """
+        return self.answers.find(no_cursor_timeout=True)
+
     def update_questions(self, question):
         """
         更新问题信息
@@ -52,26 +59,16 @@ class DBHelper(object):
         """
         return self.forward_index.find(no_cursor_timeout=True)
 
-    def add_forward_indexes(self, question_id, title_info_dict, content_info_dict):
+    def add_forward_indexes(self, answer_id, content_info_dict):
         """
         添加正向索引
-        :param question_id: 问题ID 
-        :param title_info_dict: 问题标题信息
-        :param content_info_dict: 问题内容信息
+        :param answer_id: 答案ID
+        :param content_info_dict: 内容信息
         :return: 
         """
         return self.forward_index.insert_one(
-            {'question_id': question_id, 'title_info': title_info_dict, 'content_info': content_info_dict})
+            {'answer_id': answer_id, 'content_info': content_info_dict})
 
-    def add_many_forward_indexes(self, ques_list):
-        """
-        添加多个正向索引
-        :param ques_list:正向索引列表
-        :return:
-        """
-        self.forward_index.insert_many(
-            {'question_id': ques_info[0], 'title_info': ques_info[1], 'content_info': ques_info[2]} for ques_info in
-            ques_list)
 
     def clear_forward_indexes(self):
         """
@@ -94,24 +91,13 @@ class DBHelper(object):
             self.key_word.insert_one({"id": self.key_word_count, "word": word})
             return self.key_word_count
 
-    def add_reverse_index_title(self, key_word_id, question_id, weight):
-        """
-        添加反向索引(标题)
-        :param key_word_id:索引关键字ID
-        :param question_id:问题ID
-        :param weight:关键字对应权重
-        :return:
-        """
-        self.reverse_index.update({"word_key_id": key_word_id}, {"$addToSet": {"title": [question_id, weight]}},
-                                  upsert=True)
-
-    def add_reverse_index_content(self, key_word_id, question_id, weight):
+    def add_reverse_index_content(self, key_word_id, answer_id, weight):
         """
         添加反向索引(内容)
         :param key_word_id:索引关键字ID
-        :param question_id:问题ID
+        :param answer_id:答案ID
         :param weight:关键字对应权重
         :return:
         """
-        self.reverse_index.update({"word_key_id": key_word_id}, {"$addToSet": {"content": [question_id, weight]}},
+        self.reverse_index.update({"word_key_id": key_word_id}, {"$addToSet": {"content": [answer_id, weight]}},
                                   upsert=True)

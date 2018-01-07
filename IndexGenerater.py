@@ -8,8 +8,8 @@ def generate_forward_index():
     """
     生成问题正向索引,并存入数据库
     索引内容:
-        question_id             title_info                                                                  content_info
-        问题ID      标题关键词1ID,关键词1TF * IDF权重;标题关键词2ID,关键词2TF * IDF权重......      内容关键词ID.....
+        question_id        content_info
+        问题ID            内容关键词ID.....
 
     :return:
     """
@@ -17,39 +17,33 @@ def generate_forward_index():
     # 清空正向索引
     db_helper.clear_forward_indexes()
 
-    r = db_helper.get_all_questions()
+    r = db_helper.get_all_answers()
     # 重新生成索引
-    for question in r:
-        res = handler_each_question(question)
-        db_helper.add_forward_indexes(res[0], res[1], res[2])
+    for answer in r:
+        res = handler_each_answer(answer)
+        db_helper.add_forward_indexes(res[0], res[1])
 
     r.close()
     # 由于使用行列式生成式的方式,无法关闭游标,所以用以上形式
     # db_helper.add_many_forward_indexes([handler_each_question(question) for question in db_helper.get_all_questions()])
 
 
-def handler_each_question(question):
+def handler_each_answer(answer):
     """
-    处理每个问题,生成正向索引
-    :param question: 问题
+    处理每个答案,生成正向索引
+    :param answer: 答案
     :return: 
     """
 
-    # 问题ID
-    id = question['question_id']
-    # 问题标题
-    title = question['title']
-    # 问题内容文本
-    content = question['content']
+    # 答案ID
+    id = answer['answer_id']
+    # 答案内容文本
+    content = answer['content']
     content_info = None
-    title_info = None
     if len(content) > 1:
         #     有效的内容
         content_info = jieba.analyse.extract_tags(content, topK=8, withWeight=True)
-    if len(title) > 1:
-        #     有效的标题
-        title_info = jieba.analyse.extract_tags(title, topK=5, withWeight=True)
-    return id, word_info_to_id_info(title_info), word_info_to_id_info(content_info)
+    return id, word_info_to_id_info(content_info)
 
 
 def word_info_to_id_info(word_info):
@@ -67,23 +61,20 @@ def word_info_to_id_info(word_info):
 def generate_reverse_index():
     """
     生成反向索引(前提是已经生成好了正向索引),索引内容:
-    key_word_id                 title                                       content
-    关键词ID      [[标题包含关键词的问题1的ID,关键词权重],........]       [[内容包含关键词的问题1的ID,关键词权重],........]
+    key_word_id                        content
+    关键词ID        [[内容包含关键词的答案1的ID,关键词权重],........]
 
     :return:
     """
     db_helper = DBHelper.get_instance()
     for f_index in db_helper.get_forward_indexes():
-        q_id = f_index['question_id']
-        title_info = f_index['title_info']
+        a_id = f_index['answer_id']
         content_info = f_index['content_info']
-        if title_info:
-            for title in title_info:
-                db_helper.add_reverse_index_title(title[0], q_id, title[1])
         if content_info:
             for content in content_info:
-                db_helper.add_reverse_index_content(content[0], q_id, content[1])
+                db_helper.add_reverse_index_content(content[0], a_id, content[1])
 
 
-# generate_forward_index()
-# generate_reverse_index()
+generate_forward_index()
+print("正向结束")
+generate_reverse_index()
