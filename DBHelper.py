@@ -22,6 +22,8 @@ class DBHelper(object):
         self.topics = self.db.TopicsInfo
         # 正向索引表
         self.forward_index = self.db.ForwardIndex
+        # 反向索引表
+        self.reverse_index = self.db.ReverseIndex
         # 关键词表
         self.key_word = self.db.KeyWord
 
@@ -100,7 +102,8 @@ class DBHelper(object):
         :param weight:关键字对应权重
         :return:
         """
-
+        self.reverse_index.update({"word_key_id": key_word_id}, {"$addToSet": {"title": [question_id, weight]}},
+                                  upsert=True)
 
     def add_reverse_index_content(self, key_word_id, question_id, weight):
         """
@@ -110,4 +113,5 @@ class DBHelper(object):
         :param weight:关键字对应权重
         :return:
         """
-        pass
+        self.reverse_index.update({"word_key_id": key_word_id}, {"$addToSet": {"content": [question_id, weight]}},
+                                  upsert=True)

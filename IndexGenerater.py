@@ -85,4 +85,5 @@ def generate_reverse_index():
                 db_helper.add_reverse_index_content(content[0], q_id, content[1])
 
 
-generate_forward_index()
+# generate_forward_index()
+# generate_reverse_index()
