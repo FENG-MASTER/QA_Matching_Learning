@@ -9,6 +9,10 @@ class DBHelper(object):
 
     @staticmethod
     def get_instance():
+        """
+        单例
+        :return:
+        """
         if not DBHelper._instance:
             DBHelper._instance = DBHelper()
         return DBHelper._instance

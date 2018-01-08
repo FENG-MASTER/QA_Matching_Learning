@@ -10,9 +10,11 @@ def del_question_content_html_from_db():
     :return:
     """
     db_helper = DBHelper.get_instance()
-    for question in db_helper.get_all_questions():
+    r = db_helper.get_all_questions()
+    for question in r:
         question['content'] = del_html(question['content'])
         db_helper.update_questions(question)
+    r.close()
 
 
 def del_html(content):
@@ -33,13 +35,15 @@ def del_answer_content_html_from_db():
     """
     i = 0
     db_helper = DBHelper.get_instance()
-    for answer in db_helper.get_all_answers():
+    r = db_helper.get_all_answers()
+    for answer in r:
         answer['content'] = del_html(answer['content'])
         answer['excerpt'] = del_html(answer['excerpt'])
         db_helper.update_answer(answer)
         i += 1
         if i % 1000 == 0:
             print(i)
+    r.close()
 
 
 del_answer_content_html_from_db()
