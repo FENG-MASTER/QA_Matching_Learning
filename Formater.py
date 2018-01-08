@@ -25,3 +25,21 @@ def del_html(content):
     s = re_html.sub('', content)
     return s
 
+
+def del_answer_content_html_from_db():
+    """
+    删除数据库中所有答案内容中的html标签
+    :return:
+    """
+    i = 0
+    db_helper = DBHelper.get_instance()
+    for answer in db_helper.get_all_answers():
+        answer['content'] = del_html(answer['content'])
+        answer['excerpt'] = del_html(answer['excerpt'])
+        db_helper.update_answer(answer)
+        i += 1
+        if i % 1000 == 0:
+            print(i)
+
+
+del_answer_content_html_from_db()

@@ -37,12 +37,21 @@ class DBHelper(object):
         """
         return self.questions.find(no_cursor_timeout=True)
 
-    def get_all_answers(self):
+    def get_all_answers(self, mskip=0):
         """
         获取所有答案
         :return:
         """
-        return self.answers.find(no_cursor_timeout=True)
+        return self.answers.find(skip=mskip, no_cursor_timeout=True)
+
+    def update_answer(self, answer):
+        """
+        更新答案
+        :param answer:答案
+        :return:
+        """
+        self.answers.update({"answer_id": answer['answer_id']},
+                            {"$set": {"content": answer['content'], "excerpt": answer['excerpt']}})
 
     def update_questions(self, question):
         """
@@ -59,6 +68,13 @@ class DBHelper(object):
         """
         return self.forward_index.find(no_cursor_timeout=True)
 
+    def get_forward_index_count(self):
+        """
+        获得当前正向索引的数量
+        :return:
+        """
+        return self.forward_index.count()
+
     def add_forward_indexes(self, answer_id, content_info_dict):
         """
         添加正向索引
@@ -68,7 +84,6 @@ class DBHelper(object):
         """
         return self.forward_index.insert_one(
             {'answer_id': answer_id, 'content_info': content_info_dict})
-
 
     def clear_forward_indexes(self):
         """

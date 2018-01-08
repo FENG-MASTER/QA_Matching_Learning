@@ -1,4 +1,6 @@
 # coding=utf-8
+import time
+
 from DBHelper import DBHelper
 import jieba
 import jieba.analyse
@@ -15,13 +17,19 @@ def generate_forward_index():
     """
     db_helper = DBHelper.get_instance()
     # 清空正向索引
-    db_helper.clear_forward_indexes()
+    # db_helper.clear_forward_indexes()
 
-    r = db_helper.get_all_answers()
+    r = db_helper.get_all_answers(db_helper.get_forward_index_count())
     # 重新生成索引
+
+    i = db_helper.get_forward_index_count()
+
+    # 200W数据跑索引要16小时
     for answer in r:
         res = handler_each_answer(answer)
         db_helper.add_forward_indexes(res[0], res[1])
+        i += 1
+        print(i)
 
     r.close()
     # 由于使用行列式生成式的方式,无法关闭游标,所以用以上形式
