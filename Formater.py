@@ -33,9 +33,9 @@ def del_answer_content_html_from_db():
     删除数据库中所有答案内容中的html标签
     :return:
     """
-    i = 0
+    i = 206000
     db_helper = DBHelper.get_instance()
-    r = db_helper.get_all_answers()
+    r = db_helper.get_all_answers(206000)
     for answer in r:
         answer['content'] = del_html(answer['content'])
         answer['excerpt'] = del_html(answer['excerpt'])
@@ -46,4 +46,15 @@ def del_answer_content_html_from_db():
     r.close()
 
 
-del_answer_content_html_from_db()
+def cal_all_answer_len():
+    """
+    计算出每个答案的文本长度并写入数据库
+    :return:
+    """
+    db_helper = DBHelper.get_instance()
+    r = db_helper.get_all_answers()
+    for answer in r:
+        answer['len'] = len(answer['content'])
+        db_helper.update_answer(answer)
+
+# del_answer_content_html_from_db()

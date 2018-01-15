@@ -16,20 +16,22 @@ def generate_forward_index():
     :return:
     """
     db_helper = DBHelper.get_instance()
-    # 清空正向索引
+    # # 清空正向索引
     # db_helper.clear_forward_indexes()
+    # db_helper.clear_key_word()
 
     r = db_helper.get_all_answers(db_helper.get_forward_index_count())
     # 重新生成索引
 
     i = db_helper.get_forward_index_count()
 
-    # 200W数据跑索引要16小时
     for answer in r:
         res = handler_each_answer(answer)
         db_helper.add_forward_indexes(res[0], res[1])
         i += 1
-        print(i)
+        if i % 1000 == 0:
+            print(i)
+            print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
 
     r.close()
     # 由于使用行列式生成式的方式,无法关闭游标,所以用以上形式
@@ -44,14 +46,15 @@ def handler_each_answer(answer):
     """
 
     # 答案ID
-    id = answer['answer_id']
+    aid = answer['answer_id']
     # 答案内容文本
     content = answer['content']
     content_info = None
     if len(content) > 1:
         #     有效的内容
-        content_info = jieba.analyse.extract_tags(content, topK=8, withWeight=True)
-    return id, word_info_to_id_info(content_info)
+        # 获取15个关键词
+        content_info = jieba.analyse.extract_tags(content, topK=15, withWeight=True)
+    return aid, word_info_to_id_info(content_info)
 
 
 def word_info_to_id_info(word_info):
@@ -75,15 +78,25 @@ def generate_reverse_index():
     :return:
     """
     db_helper = DBHelper.get_instance()
-    for f_index in db_helper.get_forward_indexes():
+
+    # db_helper.clear_reverse_indexes()
+
+    i = 1314000
+    r = db_helper.get_forward_indexes(1314000)
+    for f_index in r:
         a_id = f_index['answer_id']
         content_info = f_index['content_info']
+        i += 1
+        if i % 1000 == 0:
+            print(i)
+            print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
         if content_info:
             for content in content_info:
                 db_helper.add_reverse_index_content(content[0], a_id, content[1])
+    r.close()
 
 
-generate_forward_index()
-print("正向索引生成结束")
+# generate_forward_index()
+# print("正向索引生成结束")
 generate_reverse_index()
 print("逆向索引生成结束")

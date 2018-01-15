@@ -55,7 +55,8 @@ class DBHelper(object):
         :return:
         """
         self.answers.update({"answer_id": answer['answer_id']},
-                            {"$set": {"content": answer['content'], "excerpt": answer['excerpt']}})
+                            {"$set": {"content": answer['content'], "excerpt": answer['excerpt'],
+                                      "len": answer['len']}})
 
     def update_questions(self, question):
         """
@@ -65,12 +66,12 @@ class DBHelper(object):
         """
         self.questions.update({"question_id": question["question_id"]}, {"$set": question})
 
-    def get_forward_indexes(self):
+    def get_forward_indexes(self,mskip=0):
         """
         获得正向索引
         :return:
         """
-        return self.forward_index.find(no_cursor_timeout=True)
+        return self.forward_index.find(skip=mskip,no_cursor_timeout=True)
 
     def get_forward_index_count(self):
         """
@@ -96,6 +97,20 @@ class DBHelper(object):
         """
         self.forward_index.remove()
 
+    def clear_reverse_indexes(self):
+        """
+        清空反向索引
+        :return:
+        """
+        self.reverse_index.remove()
+
+    def clear_key_word(self):
+        """
+        清空关键词
+        :return:
+        """
+        self.key_word.remove()
+
     def add_or_get__key_word(self, word):
         """
         增加关键词,如果已经存在,则直接返回关键词ID,如果不存在,新建关键词后返回ID
@@ -118,5 +133,29 @@ class DBHelper(object):
         :param weight:关键字对应权重
         :return:
         """
-        self.reverse_index.update({"word_key_id": key_word_id}, {"$addToSet": {"content": [answer_id, weight]}},
+        self.reverse_index.update({"word_key_id": key_word_id}, {"$push": {"content": [answer_id, weight]}},
                                   upsert=True)
+
+    def get_answers_by_key_word_id(self, key_word_id):
+        """
+        根据关键词ID获取带有关键词的所有答案
+        :param key_word_id:关键词ID
+        :return:答案ID和对应权重的列表
+        """
+        return self.key_word.find_one({"id": key_word_id})
+
+    def get_key_word_id(self, key_word):
+        """
+        根据关键词获取关键词ID
+        :param key_word: 关键词
+        :return:关键词ID,如果查询不到返回None
+        """
+        r = self.key_word.find_one({"word": key_word})
+        if r:
+            return r['id']
+        else:
+            return None
+
+
+if __name__ == '__main__':
+    pass
