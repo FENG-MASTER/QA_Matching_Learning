@@ -4,6 +4,7 @@ from sklearn import svm
 from DBHelper import DBHelper
 import jieba
 import jieba.analyse
+import math
 
 # 缩放参数,用于降低问题详细内容中关键词的权重(相对于标题来说)
 SHRINK_PARM = 0.5
@@ -99,9 +100,10 @@ def learn():
                     else:
                         # 如果没有,直接置为0
                         key_word_feature.append(0)
-                # 创建时间,更新时间,点赞数,评论数+关键词特征值(8个)
+                # 创建时间,更新时间,评论数+关键词特征值(8个)
+                # 除了点赞数.点赞数用于评分(输出)
                 answers_feature.append(
-                    [ans['create_time'], ans['update_time'], ans['voteup_count'], ans['comment_count']].extend(
+                    [ans['create_time'], ans['update_time'], ans['comment_count']].extend(
                         key_word_feature))
 
             # -----------------计算每个答案的特征值-----------------#
@@ -120,8 +122,43 @@ def learn():
             # 第一步 算得分数组fw
             for k in range(1, len_of_answers):
                 for p in range(1, weidu):
-                    fw[k] = fw[k] + weight[p]
+                    fw[k] = fw[k] + weight[p] * answers_feature[k][p]
 
-            X = question_key_word_weights
+            # 第二步 算梯度delta_w向量
+            # a=Σp*x,a是向量
+            # b=Σexpf(x),b是数字
+            # c=expf(x)*x,c是向量
+            # 最终结果delta_w是向量
+
+            # 初始化a,b,c
+            a = [0.0 for i in range(weidu + 2)]
+            c = [0.0 for i in range(weidu + 2)]
+            b = 0.0
+
+            # --------------计算a------------------------
+
+            for i in range(len_of_answers):
+                # 先不topK
+                p = 1.0
+                temp = [0 for i in range(weidu + 2)]
+
+                for q in range(1, weidu):
+                    # 算P ----第q个向量排XX的概率是多少
+                    # 分母
+                    fenmu = 0.0
+                    for m in range(1, len_of_answers):
+                        fenmu += math.exp(fw[m])
+
+                    # top-1  exp(s1) / exp(s1)+exp(s2)+..+exp(sn)
+                    for m in range(1, len_of_answers):
+                        p = p * (math.exp(fw[m]) / fenmu)
+
+                    # 算乘积
+                    temp[q] = temp[q] + p * answers_feature[i][m]
+
+                for q in range(1, weidu):
+                    a[q] += temp[q]
+
+            # --------------计算a------------------------
 
     questions.close()
