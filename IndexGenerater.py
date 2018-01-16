@@ -81,8 +81,8 @@ def generate_reverse_index():
 
     # db_helper.clear_reverse_indexes()
 
-    i = 1314000
-    r = db_helper.get_forward_indexes(1314000)
+    i = 1494000
+    r = db_helper.get_forward_indexes(1494000)
     for f_index in r:
         a_id = f_index['answer_id']
         content_info = f_index['content_info']

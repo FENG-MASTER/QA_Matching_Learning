@@ -56,5 +56,14 @@ def cal_all_answer_len():
     for answer in r:
         answer['len'] = len(answer['content'])
         db_helper.update_answer(answer)
+    r.close()
+
+
+def add_question_key_word_info():
+    """
+    添加问题关键词信息到问题数据库,防止多次计算,方便使用
+    :return: 
+    """
+    pass
 
 # del_answer_content_html_from_db()

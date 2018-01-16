@@ -48,6 +48,14 @@ class DBHelper(object):
         """
         return self.answers.find(skip=mskip, no_cursor_timeout=True)
 
+    def get_answer_by_id(self, answer_id):
+        """
+        根据ID获取答案
+        :param answer_id: 答案ID
+        :return:
+        """
+        return self.answers.find({"answer_id": answer_id})
+
     def update_answer(self, answer):
         """
         更新答案
@@ -66,12 +74,20 @@ class DBHelper(object):
         """
         self.questions.update({"question_id": question["question_id"]}, {"$set": question})
 
-    def get_forward_indexes(self,mskip=0):
+    def get_forward_indexes(self, mskip=0):
         """
         获得正向索引
         :return:
         """
-        return self.forward_index.find(skip=mskip,no_cursor_timeout=True)
+        return self.forward_index.find(skip=mskip, no_cursor_timeout=True)
+
+    def get_answer_key_word_info_by_id(self,answer_id):
+        """
+        根据答案ID获取答案的关键词特征(即正向索引)
+        :param answer_id:  答案ID
+        :return:
+        """
+        return self.forward_index.find({'answer_id':answer_id})['content_info']
 
     def get_forward_index_count(self):
         """
@@ -127,14 +143,15 @@ class DBHelper(object):
 
     def add_reverse_index_content(self, key_word_id, answer_id, weight):
         """
+        TODO: 不使用这个结构,可以模仿链表在数据库层面做个链表结构,可能会加快速度
         添加反向索引(内容)
         :param key_word_id:索引关键字ID
         :param answer_id:答案ID
         :param weight:关键字对应权重
         :return:
         """
-        self.reverse_index.update({"word_key_id": key_word_id}, {"$push": {"content": [answer_id, weight]}},
-                                  upsert=True)
+        self.reverse_index.update_one({"word_key_id": key_word_id}, {"$addToSet": {"content": [answer_id, weight]}},
+                                      upsert=True)
 
     def get_answers_by_key_word_id(self, key_word_id):
         """
