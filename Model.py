@@ -72,7 +72,7 @@ def learn():
             # -----------------提取含有问题关键词的答案列表-----------------#
 
 
-            # -----------------计算每个答案的特征值-----------------#
+            # -----------------计算每个答案的特征值和标准评分-----------------#
 
             # 数据库读取答案信息(特征值)
             answers_feature = []
@@ -80,8 +80,11 @@ def learn():
             # 答案和问题之间的关键词权值的乘积
             key_word_feature = []
 
-            for id in answers_ids:
-                ans = db.get_answer_by_id(id)
+            # 标准评分,根据点赞数计算得出
+            Y = []
+
+            for _id in answers_ids:
+                ans = db.get_answer_by_id(_id)
 
                 # 数据库获取答案关键词特征值(可能不够15个,需要处理)
                 ans_key_word_info = db.get_answer_key_word_info_by_id(id)
@@ -105,8 +108,16 @@ def learn():
                 answers_feature.append(
                     [ans['create_time'], ans['update_time'], ans['comment_count']].extend(
                         key_word_feature))
+                temp_y = 0
+                for i in key_word_feature:
+                    temp_y += i * ans['voteup_count']
 
-            # -----------------计算每个答案的特征值-----------------#
+                Y.append(temp_y)
+
+            # -----------------计算每个答案的特征值和标准评分-----------------#
+
+
+
 
 
             # 权重修正值
@@ -140,7 +151,7 @@ def learn():
             for i in range(len_of_answers):
                 # 先不topK
                 p = 1.0
-                temp = [0 for i in range(weidu + 2)]
+                temp = [0 for _i in range(weidu + 2)]
 
                 for q in range(1, weidu):
                     # 算P ----第q个向量排XX的概率是多少
@@ -154,11 +165,42 @@ def learn():
                         p = p * (math.exp(fw[m]) / fenmu)
 
                     # 算乘积
-                    temp[q] = temp[q] + p * answers_feature[i][m]
+                    temp[q] = temp[q] + p * answers_feature[i][q]
 
                 for q in range(1, weidu):
                     a[q] += temp[q]
 
             # --------------计算a------------------------
+
+            # --------------计算b-----------------------
+            for i in range(1, len_of_answers):
+                b += math.exp(fw[i])
+            # --------------计算b-----------------------
+
+
+            # --------------计算c-----------------------
+            for k in range(1, len_of_answers):
+                temp = [0 for i in range(weidu + 2)]
+                for q in range(1, len_of_answers):
+                    temp[q] = temp[q] + math.exp(fw[k]) * answers_feature[k][q]
+
+                for q in range(1, weidu):
+                    c[q] += temp[q]
+            # --------------计算c-----------------------
+
+            # --------------计算梯度：delta_x=-a+1/b*c-----------------
+
+            for q in range(1, weidu):
+                delta_w[q] = (-1) * a[q] + ((1.0 / b) * c[q])
+
+            # --------------计算梯度：delta_x=-a+1/b*c-----------------
+
+            # --------------第三步 更新权重-----------------
+            for k in range(1, weidu):
+                weight[k] -= learningRate * delta_w[k]
+
+
+
+            # --------------第三步 更新权重-----------------
 
     questions.close()
