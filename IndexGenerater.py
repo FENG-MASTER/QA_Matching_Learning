@@ -98,5 +98,5 @@ def generate_reverse_index():
 
 # generate_forward_index()
 # print("正向索引生成结束")
-generate_reverse_index()
-print("逆向索引生成结束")
+# generate_reverse_index()
+# print("逆向索引生成结束")

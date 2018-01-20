@@ -34,12 +34,12 @@ class DBHelper(object):
         # 获取关键词数目,即最大自增ID
         self.key_word_count = self.key_word.count()
 
-    def get_all_questions(self):
+    def get_all_questions(self,mskip=0):
         """
         查询获得所有问题
         :return:
         """
-        return self.questions.find(no_cursor_timeout=True)
+        return self.questions.find(skip=mskip,no_cursor_timeout=True)
 
     def get_all_answers(self, mskip=0):
         """
@@ -54,7 +54,7 @@ class DBHelper(object):
         :param answer_id: 答案ID
         :return:
         """
-        return self.answers.find({"answer_id": answer_id})
+        return self.answers.find_one({"answer_id": answer_id})
 
     def update_answer(self, answer):
         """
@@ -87,7 +87,7 @@ class DBHelper(object):
         :param answer_id:  答案ID
         :return:
         """
-        return self.forward_index.find({'answer_id':answer_id})['content_info']
+        return self.forward_index.find_one({'answer_id':answer_id})['content_info']
 
     def get_forward_index_count(self):
         """
@@ -159,7 +159,12 @@ class DBHelper(object):
         :param key_word_id:关键词ID
         :return:答案ID和对应权重的列表
         """
-        return self.key_word.find_one({"id": key_word_id})
+        res=self.reverse_index.find_one({"word_key_id": key_word_id})
+        if res:
+            return res['content']
+        else:
+            return []
+
 
     def get_key_word_id(self, key_word):
         """
