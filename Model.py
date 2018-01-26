@@ -5,6 +5,7 @@ from DBHelper import DBHelper
 import jieba
 import jieba.analyse
 from numpy import *
+import numpy as np
 
 from Box import Box
 
@@ -35,14 +36,16 @@ def learn():
 
     ALL_X = []
     ALL_Y = []
-    ALL_QID=[]
+    ALL_QID = []
 
     # ----------初始化--------------#
 
-    questions = db.get_all_questions(1000)  # 训练总问题数
+    questions = db.get_all_questions(mlimit=2000)  # 训练总问题数
+
+    index = 0
 
     for question in questions:
-
+        index += 1
         # -----------------提取含有问题关键词的答案列表  TODO:可优化,把关键词直接存到数据库-----------------#
         title_tags = jieba.analyse.extract_tags(question['title'], topK=5, withWeight=True)
         content_tag = jieba.analyse.extract_tags(question['content'], topK=8, withWeight=True)
@@ -90,7 +93,7 @@ def learn():
         # 标准评分,根据点赞数计算得出
         Y = []
 
-        answers_feature_score_list=[]
+        answers_id_score_feature_list = []
 
         for _id in answers_id_list:
             ans = db.get_answer_by_id(_id)
@@ -127,22 +130,43 @@ def learn():
             ft = [ans['create_time'], ans['update_time'], ans['comment_count']]
             ft.extend(key_word_feature)
 
+            vp = ans['voteup_count']
+            if vp == 0:
+                vp = 1
             temp_y = 0
             for i in key_word_feature:
-                temp_y += i * ans['voteup_count']
+                temp_y += i * vp
 
-            answers_feature_score_list.append([_id,temp_y,ft])
-            answers_feature.append(ft)
+            answers_id_score_feature_list.append([_id, temp_y, ft])
+            # answers_feature.append(ft)
+            #
+            #
+            #
+            # Y.append(temp_y)
+            # ALL_X.append(answers_feature)
+            # ALL_QID.append(question['question_id'])
+            # ALL_Y.append(Y)
 
+        # 选出最高分前100
+        answers_id_score_feature_list.sort(key=lambda d: d[1], reverse=True)
 
+        _len = len(answers_id_score_feature_list)
+        if _len > 100:
+            _len = 100
 
-            Y.append(temp_y)
-            ALL_X.append(answers_feature)
+        for i in range(_len):
+            ALL_X.append(answers_id_score_feature_list[i][2])
+            ALL_Y.append(answers_id_score_feature_list[i][1])
             ALL_QID.append(question['question_id'])
-            ALL_Y.append(Y)
 
-        Model.fit(array(preprocessing.scale(answers_feature)), array(Y))
-        print("训练一次")
+        print('处理问题%d' % (index))
+        print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+
+    print('开始训练')
+    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+    Model.fit(preprocessing.scale(ALL_X), preprocessing.scale(ALL_Y), ALL_QID)
+    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+    print("训练一次")
     # -----------------计算每个答案的特征值和标准评分-----------------#
 
     questions.close()
@@ -170,19 +194,24 @@ def learn():
 
     score_list = []
 
+    test_ALL_X = []
+
     for _id in ans_id_list:
 
         ans = db.get_answer_by_id(_id)
+        key_word_feature = []
+        feature = []
 
         # 数据库获取答案关键词特征值(可能不够15个,需要处理)
         ans_key_word_info = db.get_answer_key_word_info_by_id(_id)
-        # 答案关键词ID列表
-        ans_key_word_ids = [_info[0] for _info in ans_key_word_info]
 
         # 如果关键词特征值不够15个,则后面补0
         if len(ans_key_word_info) < 15:
             for i in range(15 - len(ans_key_word_info)):
                 ans_key_word_info.append([0, 0])
+
+        # 答案关键词ID列表
+        ans_key_word_ids = [_info[0] for _info in ans_key_word_info]
 
         for i in range(len(ans_key_word_ids)):
             if ans_key_word_ids[i] in ques_key_word_ids:
@@ -195,10 +224,12 @@ def learn():
         feature = [ans['create_time'], ans['update_time'], ans['comment_count']]
         feature.extend(key_word_feature)
 
-        s = Model.predict(feature)
-        score_list.append(Box(_id, s))
+        test_ALL_X.append(feature)
 
-    score_list.sort(key=lambda box: box.vars)
+    s = Model.predict(preprocessing.scale(test_ALL_X))
+    score_list = np.vstack((array(list(ans_id_list)), array(s)))
+
+    score_list.sort(axis=0)
 
     print(score_list)
 

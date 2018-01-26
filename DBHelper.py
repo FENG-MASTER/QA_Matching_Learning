@@ -34,12 +34,12 @@ class DBHelper(object):
         # 获取关键词数目,即最大自增ID
         self.key_word_count = self.key_word.count()
 
-    def get_all_questions(self,mskip=0):
+    def get_all_questions(self,mskip=0,mlimit=0):
         """
         查询获得所有问题
         :return:
         """
-        return self.questions.find(skip=mskip,no_cursor_timeout=True)
+        return self.questions.find(skip=mskip,limit=mlimit,no_cursor_timeout=True)
 
     def get_all_answers(self, mskip=0):
         """
