@@ -178,6 +178,18 @@ class DBHelper(object):
         else:
             return None
 
+    def get_key_word_by_id(self,key_word_id):
+        """
+        根据ID返回关键词
+        :param key_word_id: 关键词ID
+        :return:
+        """
+        r = self.key_word.find_one({'id':key_word_id})
+        if r:
+            return r['word']
+        else:
+            return None
+
 
 if __name__ == '__main__':
     pass
