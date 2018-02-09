@@ -53,9 +53,13 @@ def cal_all_answer_len():
     """
     db_helper = DBHelper.get_instance()
     r = db_helper.get_all_answers()
+    i=0
     for answer in r:
+        i+=1
         answer['len'] = len(answer['content'])
         db_helper.update_answer(answer)
+        if i%1000==0:
+            print(i)
     r.close()
 
 
@@ -66,4 +70,4 @@ def add_question_key_word_info():
     """
     pass
 
-# del_answer_content_html_from_db()
+cal_all_answer_len()

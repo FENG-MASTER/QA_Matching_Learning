@@ -35,7 +35,7 @@ def learn():
 
     # ----------初始化--------------#
 
-    questions = db.get_all_questions(mlimit=5)  # 训练总问题数
+    questions = db.get_all_questions(mlimit=2000)  # 训练总问题数
 
     index = 0
 
@@ -136,12 +136,6 @@ def learn():
                 else:
                     # 如果没有,直接置为0
                     key_word_feature.append(0)
-            # 创建时间,更新时间,评论数+关键词特征值(8个)
-            # 除了点赞数.点赞数用于评分(输出)
-
-            ft = [ans['create_time'], ans['update_time'], ans['comment_count']]
-
-            ft.extend(key_word_feature)
 
             # 计算分数
 
@@ -157,6 +151,16 @@ def learn():
 
             temp_y = temp_y ** cy
 
+
+            # 创建时间,更新时间,评论数+关键词特征值(8个)
+            # 除了点赞数.点赞数用于评分(输出)
+
+            ft = [ans['create_time'], ans['update_time'], ans['comment_count'],ans['len'],cy]
+
+            ft.extend(key_word_feature)
+
+
+
             answers_id_score_feature_list.append([_id, temp_y, ft])
 
         # 选出最高分前100
@@ -165,17 +169,22 @@ def learn():
         each_x=[_i[2] for _i in answers_id_score_feature_list]
         each_y = [_i[1] for _i in answers_id_score_feature_list]
 
+        ll=len(each_x)
+        if ll>3:
+            ll=3
+
+        print('-------------')
+        for _i in range(ll):
+            print('id:', answers_id_score_feature_list[_i][0])
+            print('score', each_y[_i])
+            print('feature', each_x[_i])
+
+        print('-------------')
+
         each_x=preprocessing.MinMaxScaler().fit_transform(each_x)
         each_y=preprocessing.MinMaxScaler().fit_transform(array(each_y).reshape(-1, 1))
 
-        print('-------------')
-        for _i in range(3):
-            print('id:',answers_id_score_feature_list[_i][0])
-            print('score',each_y[_i])
-            print('feature',each_x[_i])
 
-
-        print('-------------')
 
         _len = len(answers_id_score_feature_list)
         if _len > 100:
@@ -276,13 +285,18 @@ def learn():
             if ques_key_word_ids[i] in ans_key_word_ids:
                 # 如果某关键词ID在问题关键词和答案关键词中都有,那么命中,计算特征值(用相应权值相乘
                 key_word_feature.append(
-                    ques_key_word_weights[i] * (ans_key_word_info[ans_key_word_ids.index(ques_key_word_ids[i])][1])+1)
+                    ques_key_word_weights[i] * ((ans_key_word_info[ans_key_word_ids.index(ques_key_word_ids[i])][1])+1))
                 _i += 1
             else:
                 # 如果没有,直接置为0
                 key_word_feature.append(0)
 
-        feature = [ans['create_time'], ans['update_time'], ans['comment_count']]
+        cy=0
+        for _i in key_word_feature:
+            if _i!=0:
+                cy+=1
+
+        feature = [ans['create_time'], ans['update_time'], ans['comment_count'],ans['len'],cy]
         feature.extend(key_word_feature)
 
         test_ALL_X.append(feature)
