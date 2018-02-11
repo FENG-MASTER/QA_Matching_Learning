@@ -24,7 +24,7 @@ def learn():
     Y_normalize = preprocessing.MinMaxScaler()
 
     # Model = MLPRegressor(solver='lbfgs', alpha=1e-40,hidden_layer_sizes=(5, 2), random_state=1)
-    Model = ElasticNet(alpha=1e-40, tol=1e-38,max_iter=10000)
+    Model = ElasticNet(alpha=1e-15, tol=1e-13,max_iter=10000)
 
     # ----------初始化--------------#
 
@@ -35,13 +35,14 @@ def learn():
 
     # ----------初始化--------------#
 
-    questions = db.get_all_questions(mlimit=2000)  # 训练总问题数
+    questions = db.get_all_questions(mlimit=50)  # 训练总问题数
 
     index = 0
 
     for question in questions:
         index += 1
         # -----------------提取含有问题关键词的答案列表  TODO:可优化,把关键词直接存到数据库-----------------#
+        print(question['title'])
         title_tags = jieba.analyse.extract_tags(question['title'], topK=5, withWeight=True)
         content_tag = jieba.analyse.extract_tags(question['content'], topK=8, withWeight=True)
 
@@ -214,7 +215,7 @@ def learn():
 
     # ---------------测试------------------------#
 
-    new_ques = '游戏行业现状'
+    new_ques = '国内有多少人在做量化交易'
 
     tags = jieba.analyse.extract_tags(new_ques, topK=8, withWeight=True)
 

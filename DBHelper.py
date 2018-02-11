@@ -31,6 +31,12 @@ class DBHelper(object):
         # 关键词表
         self.key_word = self.db.KeyWord
 
+        # 问题反向索引
+        self.question_reverse_index=self.db.QuestionReverseIndex
+
+        # 问题正向索引
+        self.question_forward_index = self.db.QuestionForwardIndex
+
         # 获取关键词数目,即最大自增ID
         self.key_word_count = self.key_word.count()
 
@@ -189,6 +195,39 @@ class DBHelper(object):
             return r['word']
         else:
             return None
+
+    def add_question_reverse_index_content(self, key_word_id, question_id, weight):
+        """
+        增加问题反向索引
+        :param key_word_id:关键词ID
+        :param question_id:问题ID
+        :param weight:关键词权重
+        :return:
+        """
+        return self.question_reverse_index.update_one({"word_key_id": key_word_id},{"$addToSet": {"content": [question_id, weight]}},upsert=True)
+
+    def add_question_forward_index_content(self,question_id, content_info_dict):
+        """
+        增加问题正向索引
+        :param question_id:问题ID
+        :param content_info_dict:关键词序列
+        :return:
+        """
+        return self.question_forward_index.insert_one({'question_id':question_id,'content_info':content_info_dict})
+
+    def get_question_forward_index(self):
+        """
+        获取问题正向索引
+        :return:
+        """
+        return self.question_forward_index.find(no_cursor_timeout=True)
+
+    def clear_question_forward_indexes(self):
+        """
+        清空问题正向索引
+        :return:
+        """
+        self.question_forward_index.remove()
 
 
 if __name__ == '__main__':

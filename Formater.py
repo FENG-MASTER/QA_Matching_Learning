@@ -68,6 +68,11 @@ def add_question_key_word_info():
     添加问题关键词信息到问题数据库,防止多次计算,方便使用
     :return: 
     """
-    pass
+    db_helper=DBHelper.get_instance()
+    r=db_helper.get_all_questions()
+    i=0
+    for question in r:
+        i+=1
+
 
 cal_all_answer_len()

@@ -96,6 +96,63 @@ def generate_reverse_index():
     r.close()
 
 
+def generate_question_forward_index():
+    """
+    生成问题正向索引
+    :return:
+    """
+    db_helper = DBHelper.get_instance()
+
+    # 清空问题正向索引
+    db_helper.clear_question_forward_indexes()
+
+    r=db_helper.get_all_questions()
+    i=0
+    for question in r:
+        i+=1
+        res=handler_each_question(question)
+        db_helper.add_question_forward_index_content(res[0],res[1])
+        if i%1000==0:
+            print(i)
+
+    r.close()
+
+
+
+def handler_each_question(question):
+    # 问题ID
+    qid = question['question_id']
+    #问题内容文本
+    content = question['title']
+    content_info = None
+    if len(content) > 1:
+        #     有效的内容
+        # 获取10个关键词
+        content_info = jieba.analyse.extract_tags(content, topK=10, withWeight=True)
+    return qid, word_info_to_id_info(content_info)
+
+def generate_question_reverse_index():
+    """
+    生成问题反向索引
+    :return:
+    """
+    db_helper = DBHelper.get_instance()
+    r=db_helper.get_question_forward_index()
+    i=0
+    for findex in r:
+        i+=1
+        qid=findex['question_id']
+        content_info=findex['content_info']
+        if i%1000==0:
+            print(i)
+        if content_info:
+            for content in content_info:
+                db_helper.add_question_reverse_index_content(content[0],qid,content[1])
+
+    r.close()
+
+generate_question_reverse_index()
+# generate_question_forward_index()
 # generate_forward_index()
 # print("正向索引生成结束")
 # generate_reverse_index()
