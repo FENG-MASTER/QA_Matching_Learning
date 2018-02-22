@@ -46,7 +46,7 @@ def learn():
         title_tags = jieba.analyse.extract_tags(question['title'], topK=5, withWeight=True)
         content_tag = jieba.analyse.extract_tags(question['content'], topK=8, withWeight=True)
 
-        title_tags.sort(key=lambda d:d[1])
+        title_tags.sort(key=lambda d : d[1])
 
         tags = title_tags
 
@@ -83,6 +83,9 @@ def learn():
                 question_key_word_ids.append(0)
                 question_key_word_weights.append(0)
 
+
+
+
         # 包含关键词的所有答案列表(或)
 
         answers_id_list = []
@@ -95,7 +98,42 @@ def learn():
         # 答案ID列表去重
         answers_id_list = set(answers_id_list)
 
+
         # -----------------提取含有问题关键词的答案列表-----------------#
+
+
+        # -----------------提取含有问题关键词的问题列表-----------------#
+
+
+
+        # 包含关键词的所有问题列表(或)
+
+        question_word_id_weight_list=[]
+
+        question_id_score_map={}
+
+        for wid in question_key_word_ids:
+            o=db.get_question_by_key_word_id(wid)
+            for content in o:
+                # +1是防止小于1出现相乘越来越小的情况
+                _question_id=content[0]
+                _weight=content[1]+1
+
+                if _question_id not in question_id_score_map:
+                    # 如果问题没有记录,则生成一个,并计算初始分数
+                    question_id_score_map[_question_id]=[1,_weight]
+                else:
+                    # 如果问题之前有记录,计算新的得分
+                    _index,_last_weight=question_id_score_map[_question_id]
+                    _index+=1
+                    _next_weight=(_last_weight+_weight)**_index
+                    question_id_score_map[_question_id]=[_index,_next_weight]
+
+
+
+        # -----------------提取含有问题关键词的问题列表-----------------#
+
+
 
 
         # -----------------计算每个答案的特征值和标准评分-----------------#

@@ -151,7 +151,7 @@ def generate_question_reverse_index():
 
     r.close()
 
-generate_question_reverse_index()
+# generate_question_reverse_index()
 # generate_question_forward_index()
 # generate_forward_index()
 # print("正向索引生成结束")

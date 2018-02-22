@@ -171,6 +171,19 @@ class DBHelper(object):
         else:
             return []
 
+    def get_question_by_key_word_id(self,key_word_id):
+        """
+        根据关键词ID获取带有关键词的所有问题
+        :param key_word_id:
+        :return:
+        """
+        res=self.question_reverse_index.find_one({'word_key_id':key_word_id})
+        if res:
+            return res['content']
+        else:
+            return []
+
+
 
     def get_key_word_id(self, key_word):
         """
