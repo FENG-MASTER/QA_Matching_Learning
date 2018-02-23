@@ -35,7 +35,7 @@ def learn():
 
     # ----------初始化--------------#
 
-    questions = db.get_all_questions(mlimit=50)  # 训练总问题数
+    questions = db.get_all_questions(mlimit=20)  # 训练总问题数
 
     index = 0
 
@@ -108,27 +108,66 @@ def learn():
 
         # 包含关键词的所有问题列表(或)
 
-        question_word_id_weight_list=[]
 
-        question_id_score_map={}
+        question_id_key_word_weight_score_map={}
 
+
+
+        _key_word_index=0
         for wid in question_key_word_ids:
+            # 把相关问题的信息记录下来
             o=db.get_question_by_key_word_id(wid)
             for content in o:
                 # +1是防止小于1出现相乘越来越小的情况
                 _question_id=content[0]
                 _weight=content[1]+1
 
-                if _question_id not in question_id_score_map:
-                    # 如果问题没有记录,则生成一个,并计算初始分数
-                    question_id_score_map[_question_id]=[1,_weight]
-                else:
-                    # 如果问题之前有记录,计算新的得分
-                    _index,_last_weight=question_id_score_map[_question_id]
-                    _index+=1
-                    _next_weight=(_last_weight+_weight)**_index
-                    question_id_score_map[_question_id]=[_index,_next_weight]
+                if _question_id not in question_id_key_word_weight_score_map:
+                    question_id_key_word_weight_score_map[_question_id]=[0,[0,0,0,0,0],0]
 
+                _o_level=question_id_key_word_weight_score_map[_question_id][0]
+                _o_weight_list=question_id_key_word_weight_score_map[_question_id][1]
+                _o_weight_list[_key_word_index]=_weight
+
+                question_id_key_word_weight_score_map[_question_id]=[_o_level+1,_o_weight_list,0]
+
+            _key_word_index+=1
+
+        for c in question_id_key_word_weight_score_map:
+            # 计算问题相关度的分数
+            item=question_id_key_word_weight_score_map[c]
+            wl=item[1]
+            _score=0
+            for s in wl:
+                _score+=s
+            item[2]=_score**item[0]
+            question_id_key_word_weight_score_map[c]=item
+
+
+
+        question_id_list = []
+        question_level_list=[]
+        question_score_list=[]
+        question_weight_list=[]
+
+        for qis in question_id_key_word_weight_score_map:
+            question_id_list.append(qis)
+            question_level_list.append(question_id_key_word_weight_score_map[qis][0])
+            question_weight_list.append(question_id_key_word_weight_score_map[qis][1])
+            question_score_list.append(question_id_key_word_weight_score_map[qis][2])
+
+        question_score_list=preprocessing.MinMaxScaler().fit_transform(array(question_score_list).reshape(-1,1)).tolist()
+        question_weight_list=preprocessing.MinMaxScaler().fit_transform(array(question_weight_list)).tolist()
+
+
+        question_id_key_word_weight_score_map.clear()
+
+        for _index in range(len(question_id_list)):
+            _qid=int(question_id_list[_index])
+            _level=question_level_list[_index]
+            _weight=question_weight_list[_index]
+            _score=question_score_list[_index][0]
+            question_id_key_word_weight_score_map[_qid]=[_level,_weight,_score]
 
 
         # -----------------提取含有问题关键词的问题列表-----------------#
@@ -198,6 +237,19 @@ def learn():
 
             ft.extend(key_word_feature)
 
+            if _id in question_id_key_word_weight_score_map:
+                # 如果这个问题回答的是相关问题的,则有加分
+
+                # 这个问题所回答的问题和当前问题关键词的相似情况
+                ft.extend(question_id_key_word_weight_score_map[_id][1])
+
+                # 这个问题所回答的问题和当前问题的关键字相同数目
+                ft.append(question_id_key_word_weight_score_map[_id][0])
+            else:
+                for _i in range(6):
+                    ft.append(0)
+
+
 
 
             answers_id_score_feature_list.append([_id, temp_y, ft])
@@ -222,6 +274,16 @@ def learn():
 
         each_x=preprocessing.MinMaxScaler().fit_transform(each_x)
         each_y=preprocessing.MinMaxScaler().fit_transform(array(each_y).reshape(-1, 1))
+
+
+
+        for _i in range(len(answers_id_score_feature_list)):
+            _ans_id=answers_id_score_feature_list[_i][0]
+            ans=db.get_answer_by_id(_ans_id)
+            ans_qid=ans['question_id']
+            if ans_qid in question_id_score_map:
+                # 如果发现在相似问题列表中存在 这个答案所指向的问题ID,即为重要回答,需要增加额外分数加成
+                each_y[_i]=array([each_y[_i][0]+question_id_score_map[ans_qid][1]*2])
 
 
 
