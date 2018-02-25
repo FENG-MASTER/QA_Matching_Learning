@@ -35,7 +35,7 @@ def learn():
 
     # ----------初始化--------------#
 
-    questions = db.get_all_questions(mlimit=20)  # 训练总问题数
+    questions = db.get_all_questions(mlimit=50)  # 训练总问题数
 
     index = 0
 
@@ -123,11 +123,11 @@ def learn():
                 _weight=content[1]+1
 
                 if _question_id not in question_id_key_word_weight_score_map:
-                    question_id_key_word_weight_score_map[_question_id]=[0,[0,0,0,0,0],0]
+                    question_id_key_word_weight_score_map[_question_id]=[1,[1,1,1,1,1,1,1,1],0]
 
                 _o_level=question_id_key_word_weight_score_map[_question_id][0]
                 _o_weight_list=question_id_key_word_weight_score_map[_question_id][1]
-                _o_weight_list[_key_word_index]=_weight
+                _o_weight_list[_key_word_index] =_weight +_o_weight_list[_key_word_index]
 
                 question_id_key_word_weight_score_map[_question_id]=[_o_level+1,_o_weight_list,0]
 
@@ -140,7 +140,7 @@ def learn():
             _score=0
             for s in wl:
                 _score+=s
-            item[2]=_score**item[0]
+            item[2] = _score*item[0]
             question_id_key_word_weight_score_map[c]=item
 
 
@@ -156,8 +156,8 @@ def learn():
             question_weight_list.append(question_id_key_word_weight_score_map[qis][1])
             question_score_list.append(question_id_key_word_weight_score_map[qis][2])
 
-        question_score_list=preprocessing.MinMaxScaler().fit_transform(array(question_score_list).reshape(-1,1)).tolist()
-        question_weight_list=preprocessing.MinMaxScaler().fit_transform(array(question_weight_list)).tolist()
+        question_score_list=(preprocessing.MinMaxScaler().fit_transform(array(question_score_list).reshape(-1,1))*5).tolist()
+        # question_weight_list=preprocessing.MinMaxScaler().fit_transform(array(question_weight_list)).tolist()
 
 
         question_id_key_word_weight_score_map.clear()
@@ -224,7 +224,7 @@ def learn():
             cy = 0
             for i in key_word_feature:
                 if i != 0:
-                    temp_y *= i * vp
+                    temp_y += i * vp
                     cy += 1
 
             temp_y = temp_y ** cy
@@ -237,16 +237,19 @@ def learn():
 
             ft.extend(key_word_feature)
 
-            if _id in question_id_key_word_weight_score_map:
+
+            _ans_ques_id=ans['question_id']
+
+            if _ans_ques_id in question_id_key_word_weight_score_map:
                 # 如果这个问题回答的是相关问题的,则有加分
 
                 # 这个问题所回答的问题和当前问题关键词的相似情况
-                ft.extend(question_id_key_word_weight_score_map[_id][1])
+                ft.extend(question_id_key_word_weight_score_map[_ans_ques_id][1])
 
                 # 这个问题所回答的问题和当前问题的关键字相同数目
-                ft.append(question_id_key_word_weight_score_map[_id][0])
+                ft.append(question_id_key_word_weight_score_map[_ans_ques_id][0])
             else:
-                for _i in range(6):
+                for _i in range(9):
                     ft.append(0)
 
 
@@ -257,6 +260,7 @@ def learn():
         # 选出最高分前100
         answers_id_score_feature_list.sort(key=lambda d: d[1], reverse=True)
 
+        answers_id_l=[_i[0] for _i in answers_id_score_feature_list]
         each_x=[_i[2] for _i in answers_id_score_feature_list]
         each_y = [_i[1] for _i in answers_id_score_feature_list]
 
@@ -264,15 +268,14 @@ def learn():
         if ll>3:
             ll=3
 
-        print('-------------')
-        for _i in range(ll):
-            print('id:', answers_id_score_feature_list[_i][0])
-            print('score', each_y[_i])
-            print('feature', each_x[_i])
 
-        print('-------------')
+        _arr_x=array(each_x)
+        _arr_x=np.hsplit(_arr_x, (13,))
+        # each_x=preprocessing.MinMaxScaler().fit_transform(_arr_x[0])
+        each_x=np.hstack((preprocessing.MinMaxScaler().fit_transform(_arr_x[0]),_arr_x[1]))
 
-        each_x=preprocessing.MinMaxScaler().fit_transform(each_x)
+
+        # each_x=preprocessing.MinMaxScaler().fit_transform(each_x)
         each_y=preprocessing.MinMaxScaler().fit_transform(array(each_y).reshape(-1, 1))
 
 
@@ -281,11 +284,22 @@ def learn():
             _ans_id=answers_id_score_feature_list[_i][0]
             ans=db.get_answer_by_id(_ans_id)
             ans_qid=ans['question_id']
-            if ans_qid in question_id_score_map:
+            if ans_qid in question_id_key_word_weight_score_map:
                 # 如果发现在相似问题列表中存在 这个答案所指向的问题ID,即为重要回答,需要增加额外分数加成
-                each_y[_i]=array([each_y[_i][0]+question_id_score_map[ans_qid][1]*2])
+                each_y[_i]=array([each_y[_i][0]+question_id_key_word_weight_score_map[ans_qid][2]])
 
+        answers_id_score_feature_list.clear()
+        for _index in range(len(answers_id_l)):
+            answers_id_score_feature_list.append([answers_id_l[_index],each_y[_index][0],each_x[_index]])
+        answers_id_score_feature_list.sort(key=lambda d: d[1], reverse=True)
 
+        print('-------------')
+        for _i in range(ll):
+            print('id:', answers_id_score_feature_list[_i][0])
+            print('score', answers_id_score_feature_list[_i][1])
+            print('feature', answers_id_score_feature_list[_i][2])
+
+        print('-------------')
 
         _len = len(answers_id_score_feature_list)
         if _len > 100:
@@ -315,7 +329,7 @@ def learn():
 
     # ---------------测试------------------------#
 
-    new_ques = '国内有多少人在做量化交易'
+    new_ques = '如何看待三星粉丝认为老回打着维权旗号黑三星发财'
 
     tags = jieba.analyse.extract_tags(new_ques, topK=8, withWeight=True)
 
@@ -359,6 +373,66 @@ def learn():
 
     ans_id_list = set(ans_id_list)
 
+    # 包含关键词的所有问题列表(或)
+
+    new_question_id_key_word_weight_score_map = {}
+
+    _key_word_index = 0
+    for wid in ques_key_word_ids:
+        # 把相关问题的信息记录下来
+        o = db.get_question_by_key_word_id(wid)
+        for content in o:
+            # +1是防止小于1出现相乘越来越小的情况
+            _question_id = content[0]
+            _weight = content[1] + 1
+
+            if _question_id not in new_question_id_key_word_weight_score_map:
+                new_question_id_key_word_weight_score_map[_question_id] = [1, [1, 1, 1, 1, 1,1,1,1], 0]
+
+            _o_level = new_question_id_key_word_weight_score_map[_question_id][0]
+            _o_weight_list = new_question_id_key_word_weight_score_map[_question_id][1]
+            _o_weight_list[_key_word_index] = _weight+_o_weight_list[_key_word_index]
+
+            new_question_id_key_word_weight_score_map[_question_id] = [_o_level + 1, _o_weight_list, 0]
+
+        _key_word_index += 1
+
+    for c in new_question_id_key_word_weight_score_map:
+        # 计算问题相关度的分数
+        item = new_question_id_key_word_weight_score_map[c]
+        wl = item[1]
+        _score = 0
+        for s in wl:
+            _score += s
+        item[2] = _score * item[0]
+        new_question_id_key_word_weight_score_map[c] = item
+
+    new_question_id_list = []
+    new_question_level_list = []
+    new_question_score_list = []
+    new_question_weight_list = []
+
+    for qis in new_question_id_key_word_weight_score_map:
+        new_question_id_list.append(qis)
+        new_question_level_list.append(new_question_id_key_word_weight_score_map[qis][0])
+        new_question_weight_list.append(new_question_id_key_word_weight_score_map[qis][1])
+        new_question_score_list.append(new_question_id_key_word_weight_score_map[qis][2])
+
+    new_question_score_list = preprocessing.MinMaxScaler().fit_transform(array(new_question_score_list).reshape(-1, 1)).tolist()
+    # new_question_weight_list = preprocessing.MinMaxScaler().fit_transform(array(new_question_weight_list)).tolist()
+
+    new_question_id_key_word_weight_score_map.clear()
+
+    for _index in range(len(new_question_id_list)):
+        _qid = int(new_question_id_list[_index])
+        _level = new_question_level_list[_index]
+        _weight = new_question_weight_list[_index]
+        _score = new_question_score_list[_index][0]
+        new_question_id_key_word_weight_score_map[_qid] = [_level, _weight, _score]
+
+
+    # -----------------提取含有问题关键词的问题列表-----------------#
+
     score_list = []
 
     test_ALL_X = []
@@ -400,10 +474,32 @@ def learn():
         feature = [ans['create_time'], ans['update_time'], ans['comment_count'],ans['len'],cy]
         feature.extend(key_word_feature)
 
+
+        # 问题相似度的分数计算
+
+        _ans_ques_id=ans['question_id']
+
+
+
+        if _ans_ques_id in new_question_id_key_word_weight_score_map:
+            # 如果这个问题回答的是相关问题的,则有加分
+
+            # 这个问题所回答的问题和当前问题关键词的相似情况
+            feature.extend(new_question_id_key_word_weight_score_map[_ans_ques_id][1])
+
+            # 这个问题所回答的问题和当前问题的关键字相同数目
+            feature.append(new_question_id_key_word_weight_score_map[_ans_ques_id][0])
+
+        else:
+            for _i in range(9):
+                feature.append(0)
+
         test_ALL_X.append(feature)
 
+    test_arr_x = array(test_ALL_X)
+    test_arr_x = np.hsplit(test_arr_x, (13,))
 
-    s = Model.predict(preprocessing.MinMaxScaler().fit_transform(test_ALL_X))
+    s = Model.predict( np.hstack((preprocessing.MinMaxScaler().fit_transform(test_arr_x[0]), test_arr_x[1])))
     score_list = np.vstack((array(list(ans_id_list)), array(s)))
 
     sl = list(score_list.transpose().tolist())
