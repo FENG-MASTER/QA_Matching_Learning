@@ -11,6 +11,7 @@ from Box import Box
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn import preprocessing
 from sklearn.neural_network import MLPRegressor
+from sklearn.externals import joblib
 from  sklearn.linear_model import ElasticNet
 
 # 缩放参数,用于降低问题详细内容中关键词的权重(相对于标题来说)
@@ -35,7 +36,7 @@ def learn():
 
     # ----------初始化--------------#
 
-    questions = db.get_all_questions(mlimit=50)  # 训练总问题数
+    questions = db.get_all_questions(mlimit=20)  # 训练总问题数
 
     index = 0
 
@@ -327,6 +328,8 @@ def learn():
 
     questions.close()
 
+    joblib.dump(Model, "train_model.m")
+
     # ---------------测试------------------------#
 
     new_ques = '如何看待三星粉丝认为老回打着维权旗号黑三星发财'
@@ -501,6 +504,8 @@ def learn():
 
     s = Model.predict( np.hstack((preprocessing.MinMaxScaler().fit_transform(test_arr_x[0]), test_arr_x[1])))
     score_list = np.vstack((array(list(ans_id_list)), array(s)))
+
+
 
     sl = list(score_list.transpose().tolist())
 
